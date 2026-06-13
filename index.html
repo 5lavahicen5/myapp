@@ -271,14 +271,15 @@ let wakeLock = null;
 let chattedUsersCache = new Set();
 let todayStoryCount = 0;
 let storyCountDate = '';
-let unreadCounts = {}; // { chatId: number }
+let unreadCounts = {};
 let totalUnread = 0;
+let callInProgress = false;
+let callVideoEnabled = false;
 
 const AI_ID = 'ai_assistant', AI_NAME = '🤖 Wolf AI';
 const SAVED_CHAT_ID = 'saved_messages_chat';
 const THEMES = ['dark', 'light', 'blue', 'purple'];
 
-// TURN и STUN сервера
 const iceServers = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
@@ -291,14 +292,24 @@ const iceServers = [
     { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
 ];
 
-async function getCallMedia() {
+async function unlockAudio() {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        await ctx.resume();
+        ctx.close();
+    } catch(e) {}
+}
+
+async function getCallMedia(withVideo = true) {
+    try {
+        const constraints = { audio: true };
+        if (withVideo) constraints.video = { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         localVideoTrack = stream.getVideoTracks()[0];
-        isVideoEnabled = true;
+        isVideoEnabled = !!localVideoTrack;
         return stream;
     } catch(e) {
-        console.log('Видео недоступно, аудио');
+        console.warn('Видео недоступно, пробуем только аудио', e);
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             localVideoTrack = null;
@@ -310,7 +321,6 @@ async function getCallMedia() {
     }
 }
 
-// ИИ как ChatGPT (без изменений)
 async function getAIResponse(text) {
     const lower = text.trim().toLowerCase();
     if (/^(привет|здравствуй|хай|hello|hi|здарова|салют|добрый день|доброе утро|добрый вечер)/i.test(lower)) {
@@ -961,126 +971,307 @@ async function startRecording(mode) {
 
 function stopRecording() { if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop(); if (recordingStream) { recordingStream.getTracks().forEach(t => t.stop()); recordingStream = null; } document.getElementById('videoPreviewCircle').style.display = 'none'; recordBtn.classList.remove('recording-active'); isRecording = false; }
 
+// =============== ИСПРАВЛЕННЫЕ ЗВОНКИ (и исправленная итерация) ===============
 async function startCall(chatId, targetUid) {
     if (!navigator.mediaDevices) { toast('❌ Браузер не поддерживает звонки'); return; }
     if (targetUid === AI_ID || targetUid === SAVED_CHAT_ID) { toast('❌ Нельзя позвонить ИИ'); return; }
-    try { 
-        localStream = await getCallMedia();
+    if (callInProgress) { toast('Уже есть активный звонок'); return; }
+    callInProgress = true;
+    
+    await unlockAudio();
+    
+    try {
+        const wantVideo = confirm('Включить видео во время звонка?');
+        callVideoEnabled = wantVideo;
+        localStream = await getCallMedia(wantVideo);
+        if (!localStream) throw new Error('Нет доступа к медиа');
+        
         peerConnection = new RTCPeerConnection({ iceServers });
         localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-        peerConnection.onicecandidate = e => { if (e.candidate && currentCallRef) currentCallRef.child('candidates').push(JSON.stringify(e.candidate)); };
+        
+        if (callVideoEnabled && localStream.getVideoTracks().length) {
+            const localVideo = document.getElementById('localPreviewVideo');
+            localVideo.srcObject = localStream;
+            document.getElementById('localVideoPreview').style.display = 'block';
+        } else {
+            document.getElementById('localVideoPreview').style.display = 'none';
+        }
+        
+        peerConnection.onicecandidate = e => {
+            if (e.candidate && currentCallRef) {
+                currentCallRef.child('candidates').push(JSON.stringify(e.candidate));
+            }
+        };
+        
         peerConnection.ontrack = e => {
-            if (e.track.kind === 'audio') { if (remoteAudio) remoteAudio.pause(); remoteAudio = new Audio(); remoteAudio.srcObject = e.streams[0]; remoteAudio.autoplay = true; }
-            if (e.track.kind === 'video') { document.getElementById('remoteVideo').srcObject = e.streams[0]; document.getElementById('remoteVideoContainer').style.display = 'block'; }
+            if (e.track.kind === 'audio') {
+                if (remoteAudio) remoteAudio.pause();
+                remoteAudio = new Audio();
+                remoteAudio.srcObject = e.streams[0];
+                remoteAudio.autoplay = true;
+                remoteAudio.play().catch(console.warn);
+            } else if (e.track.kind === 'video') {
+                const remoteVideo = document.getElementById('remoteVideo');
+                remoteVideo.srcObject = e.streams[0];
+                document.getElementById('remoteVideoContainer').style.display = 'block';
+            }
         };
+        
         peerConnection.onconnectionstatechange = () => {
-            if (peerConnection.connectionState === 'failed' || peerConnection.connectionState === 'disconnected') endCall(true);
+            if (peerConnection.connectionState === 'failed' || peerConnection.connectionState === 'disconnected') {
+                endCall(true);
+            } else if (peerConnection.connectionState === 'connected') {
+                stopDialTone();
+            }
         };
-        const callId = `${chatId}_${Date.now()}`; 
-        currentCallRef = db.ref(`calls/${callId}`); 
-        const offer = await peerConnection.createOffer(); 
-        await peerConnection.setLocalDescription(offer); 
-        await currentCallRef.set({ offer: { type: offer.type, sdp: offer.sdp }, target: targetUid, from: currentUser.uid, status: 'waiting', startTime: Date.now(), hasVideo: isVideoEnabled }); 
-        callStartTime = Date.now(); 
-        currentCallRef.on('child_added', async snap => { 
-            if (snap.key === 'answer') { await peerConnection.setRemoteDescription(new RTCSessionDescription(snap.val())); stopDialTone(); showCallUI('active'); requestWakeLock(); }
-            else if (snap.key === 'candidates' && peerConnection.remoteDescription) { try { await peerConnection.addIceCandidate(new RTCIceCandidate(JSON.parse(snap.val()))); } catch(e) {} }
-            else if (snap.key === 'hangup') { endCall(true); }
-        }); 
+        
+        const callId = `${chatId}_${Date.now()}`;
+        currentCallRef = db.ref(`calls/${callId}`);
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        await currentCallRef.set({
+            offer: { type: offer.type, sdp: offer.sdp },
+            target: targetUid,
+            from: currentUser.uid,
+            status: 'waiting',
+            startTime: Date.now(),
+            hasVideo: callVideoEnabled
+        });
+        callStartTime = Date.now();
+        
+        currentCallRef.on('child_added', async snap => {
+            if (snap.key === 'answer') {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(snap.val()));
+                stopDialTone();
+                showCallUI('active');
+                requestWakeLock();
+            } else if (snap.key === 'candidates' && peerConnection.remoteDescription) {
+                try {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(JSON.parse(snap.val())));
+                } catch(e) {}
+            } else if (snap.key === 'hangup') {
+                endCall(true);
+            }
+        });
+        
         playDialTone();
         showCallUI('calling');
         requestWakeLock();
-    } catch(e) { toast('Ошибка звонка: ' + e.message); } 
+    } catch (err) {
+        console.error(err);
+        toast('Ошибка звонка: ' + err.message);
+        endCall(false);
+        callInProgress = false;
+    }
 }
 
-function listenForCalls() { 
-    if (callsListener) callsListener.off(); 
-    callsListener = db.ref('calls').orderByChild('target').equalTo(currentUser.uid).on('child_added', snap => { 
-        const call = snap.val(); 
-        if (!call || call.status !== 'waiting' || call.from === currentUser.uid) return; 
-        if (peerConnection) { snap.ref.child('hangup').set(true); return; }
-        currentCallRef = snap.ref; callStartTime = call.startTime; 
+function listenForCalls() {
+    if (callsListener) callsListener.off();
+    callsListener = db.ref('calls').orderByChild('target').equalTo(currentUser.uid).on('child_added', snap => {
+        const call = snap.val();
+        if (!call || call.status !== 'waiting' || call.from === currentUser.uid) return;
+        if (callInProgress || peerConnection) {
+            snap.ref.child('hangup').set(true);
+            return;
+        }
+        callInProgress = true;
+        currentCallRef = snap.ref;
+        callStartTime = call.startTime;
         playRingtone();
-        showCallUI('incoming', call.from); 
-        document.getElementById('callAcceptBtn').onclick = async () => { 
+        showCallUI('incoming', call.from);
+        
+        const hasVideo = call.hasVideo === true;
+        
+        document.getElementById('callAcceptBtn').onclick = async () => {
             stopRingtone();
+            await unlockAudio();
             try {
-                localStream = await getCallMedia();
+                const wantVideo = hasVideo ? confirm('Собеседник предлагает видео. Включить вашу камеру?') : false;
+                callVideoEnabled = wantVideo;
+                localStream = await getCallMedia(wantVideo);
+                if (!localStream) throw new Error('Нет доступа к медиа');
+                
                 peerConnection = new RTCPeerConnection({ iceServers });
                 localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-                peerConnection.onicecandidate = e => { if (e.candidate) currentCallRef.child('candidates').push(JSON.stringify(e.candidate)); };
+                
+                if (callVideoEnabled && localStream.getVideoTracks().length) {
+                    const localVideo = document.getElementById('localPreviewVideo');
+                    localVideo.srcObject = localStream;
+                    document.getElementById('localVideoPreview').style.display = 'block';
+                } else {
+                    document.getElementById('localVideoPreview').style.display = 'none';
+                }
+                
+                peerConnection.onicecandidate = e => {
+                    if (e.candidate && currentCallRef) {
+                        currentCallRef.child('candidates').push(JSON.stringify(e.candidate));
+                    }
+                };
+                
                 peerConnection.ontrack = e => {
-                    if (e.track.kind === 'audio') { if (remoteAudio) remoteAudio.pause(); remoteAudio = new Audio(); remoteAudio.srcObject = e.streams[0]; remoteAudio.autoplay = true; }
-                    if (e.track.kind === 'video') { document.getElementById('remoteVideo').srcObject = e.streams[0]; document.getElementById('remoteVideoContainer').style.display = 'block'; }
+                    if (e.track.kind === 'audio') {
+                        if (remoteAudio) remoteAudio.pause();
+                        remoteAudio = new Audio();
+                        remoteAudio.srcObject = e.streams[0];
+                        remoteAudio.autoplay = true;
+                        remoteAudio.play().catch(console.warn);
+                    } else if (e.track.kind === 'video') {
+                        const remoteVideo = document.getElementById('remoteVideo');
+                        remoteVideo.srcObject = e.streams[0];
+                        document.getElementById('remoteVideoContainer').style.display = 'block';
+                    }
                 };
+                
                 peerConnection.onconnectionstatechange = () => {
-                    if (peerConnection.connectionState === 'failed' || peerConnection.connectionState === 'disconnected') endCall(true);
+                    if (peerConnection.connectionState === 'failed' || peerConnection.connectionState === 'disconnected') {
+                        endCall(true);
+                    }
                 };
+                
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(call.offer));
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
-                await currentCallRef.update({ answer: { type: answer.type, sdp: answer.sdp }, status: 'active' });
+                await currentCallRef.update({
+                    answer: { type: answer.type, sdp: answer.sdp },
+                    status: 'active'
+                });
                 showCallUI('active');
                 requestWakeLock();
-            } catch(e) { stopRingtone(); endCall(true); toast('Ошибка подключения'); }
-        }; 
-        document.getElementById('callRejectBtn').onclick = () => { stopRingtone(); if (currentCallRef) currentCallRef.child('hangup').set(true); hideCallUI(); };
-    }); 
+            } catch (err) {
+                console.error(err);
+                toast('Ошибка подключения: ' + err.message);
+                endCall(true);
+            }
+        };
+        
+        document.getElementById('callRejectBtn').onclick = () => {
+            stopRingtone();
+            if (currentCallRef) currentCallRef.child('hangup').set(true);
+            hideCallUI();
+            callInProgress = false;
+        };
+    });
 }
 
-async function endCall(sendMsg = true) { 
-    stopRingtone(); stopDialTone(); releaseWakeLock();
-    if (peerConnection) { peerConnection.close(); peerConnection = null; }
-    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-    if (remoteAudio) { remoteAudio.pause(); remoteAudio = null; }
+async function endCall(sendMsg = true) {
+    stopRingtone();
+    stopDialTone();
+    releaseWakeLock();
+    callInProgress = false;
+    
+    if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+    }
+    if (localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
+    }
+    if (remoteAudio) {
+        remoteAudio.pause();
+        remoteAudio = null;
+    }
     document.getElementById('remoteVideoContainer').style.display = 'none';
     document.getElementById('remoteVideo').srcObject = null;
-    localVideoTrack = null; isVideoEnabled = false;
-    if (currentCallRef && sendMsg && currentChatId && callStartTime && currentChatId !== SAVED_CHAT_ID && currentChatId !== AI_ID) { 
-        const dur = Math.round((Date.now() - callStartTime) / 1000); 
-        if (dur > 0) await db.ref(`messages/${currentChatId}`).push({ text: `${t('callDuration')} ${dur} сек`, senderId: 'system', senderName: 'System', time: Date.now(), isSystem: true }); 
-    } 
-    if (currentCallRef) { currentCallRef.child('hangup').set(true); currentCallRef = null; }
-    hideCallUI(); 
+    document.getElementById('localVideoPreview').style.display = 'none';
+    const localPreviewVideo = document.getElementById('localPreviewVideo');
+    if (localPreviewVideo.srcObject) {
+        localPreviewVideo.srcObject.getTracks().forEach(t => t.stop());
+        localPreviewVideo.srcObject = null;
+    }
+    localVideoTrack = null;
+    isVideoEnabled = false;
+    
+    if (currentCallRef && sendMsg && currentChatId && callStartTime && currentChatId !== SAVED_CHAT_ID && currentChatId !== AI_ID) {
+        const dur = Math.round((Date.now() - callStartTime) / 1000);
+        if (dur > 0) {
+            await db.ref(`messages/${currentChatId}`).push({
+                text: `${t('callDuration')} ${dur} сек`,
+                senderId: 'system',
+                senderName: 'System',
+                time: Date.now(),
+                isSystem: true
+            });
+        }
+    }
+    if (currentCallRef) {
+        currentCallRef.child('hangup').set(true);
+        currentCallRef = null;
+    }
+    hideCallUI();
 }
 
-function showCallUI(state, fromUid = null) { 
-    const ov = document.getElementById('callOverlay'); 
-    const accept = document.getElementById('callAcceptBtn'); 
-    const reject = document.getElementById('callRejectBtn'); 
-    const hangup = document.getElementById('callHangupBtn'); 
+function showCallUI(state, fromUid = null) {
+    const ov = document.getElementById('callOverlay');
+    const accept = document.getElementById('callAcceptBtn');
+    const reject = document.getElementById('callRejectBtn');
+    const hangup = document.getElementById('callHangupBtn');
     const muteBtn = document.getElementById('callMuteMicBtn');
     const videoBtn = document.getElementById('callToggleVideoBtn');
     const nameSpan = document.getElementById('callName');
     const statusSpan = document.getElementById('callStatus');
     document.getElementById('remoteVideoContainer').style.display = 'none';
     
-    if (state === 'incoming' && fromUid) { 
-        const user = Object.values(allUsers).find(u => u.uid === fromUid); 
+    if (state === 'incoming' && fromUid) {
+        const user = Object.values(allUsers).find(u => u.uid === fromUid);
         nameSpan.innerText = user?.username || 'Собеседник';
         statusSpan.innerText = 'Входящий звонок...';
-        accept.style.display = 'flex'; reject.style.display = 'flex'; hangup.style.display = 'none'; muteBtn.style.display = 'none'; videoBtn.style.display = 'none';
-    } else if (state === 'calling') { 
+        accept.style.display = 'flex';
+        reject.style.display = 'flex';
+        hangup.style.display = 'none';
+        muteBtn.style.display = 'none';
+        videoBtn.style.display = 'none';
+    } else if (state === 'calling') {
         nameSpan.innerText = document.getElementById('chatName').innerText;
         statusSpan.innerText = 'Звонок...';
-        accept.style.display = 'none'; reject.style.display = 'flex'; hangup.style.display = 'none'; muteBtn.style.display = 'none'; videoBtn.style.display = 'none';
-    } else if (state === 'active') { 
+        accept.style.display = 'none';
+        reject.style.display = 'flex';
+        hangup.style.display = 'none';
+        muteBtn.style.display = 'none';
+        videoBtn.style.display = 'none';
+        reject.onclick = () => endCall(true);
+    } else if (state === 'active') {
         statusSpan.innerText = 'Разговор...';
-        accept.style.display = 'none'; reject.style.display = 'none'; hangup.style.display = 'flex'; muteBtn.style.display = 'flex'; videoBtn.style.display = isVideoEnabled ? 'flex' : 'none'; 
+        accept.style.display = 'none';
+        reject.style.display = 'none';
+        hangup.style.display = 'flex';
+        muteBtn.style.display = 'flex';
+        videoBtn.style.display = (callVideoEnabled && localStream && localStream.getVideoTracks().length) ? 'flex' : 'none';
         hangup.onclick = () => endCall(true);
-        muteBtn.onclick = () => { isMicMuted = !isMicMuted; if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = !isMicMuted); muteBtn.innerHTML = isMicMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>'; muteBtn.style.background = isMicMuted ? '#e74c3c' : '#2c3e50'; };
-        if (isVideoEnabled) {
-            videoBtn.onclick = () => { isVideoEnabled = !isVideoEnabled; if (localVideoTrack) localVideoTrack.enabled = isVideoEnabled; videoBtn.innerHTML = isVideoEnabled ? '<i class="fas fa-video"></i>' : '<i class="fas fa-video-slash"></i>'; videoBtn.style.background = isVideoEnabled ? '#2c3e50' : '#e74c3c'; };
+        muteBtn.onclick = () => {
+            isMicMuted = !isMicMuted;
+            if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = !isMicMuted);
+            muteBtn.innerHTML = isMicMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
+            muteBtn.style.background = isMicMuted ? '#e74c3c' : '#2c3e50';
+        };
+        if (videoBtn.style.display !== 'none') {
+            videoBtn.onclick = () => {
+                if (localStream && localStream.getVideoTracks().length) {
+                    const newState = !localStream.getVideoTracks()[0].enabled;
+                    localStream.getVideoTracks().forEach(t => t.enabled = newState);
+                    videoBtn.innerHTML = newState ? '<i class="fas fa-video"></i>' : '<i class="fas fa-video-slash"></i>';
+                    videoBtn.style.background = newState ? '#2c3e50' : '#e74c3c';
+                }
+            };
         }
-    } 
-    ov.style.display = 'flex'; 
+    }
+    ov.style.display = 'flex';
 }
-function hideCallUI() { 
-    stopRingtone(); stopDialTone(); releaseWakeLock();
+
+function hideCallUI() {
+    stopRingtone();
+    stopDialTone();
     document.getElementById('callOverlay').style.display = 'none';
     document.getElementById('remoteVideoContainer').style.display = 'none';
     document.getElementById('remoteVideo').srcObject = null;
+    document.getElementById('localVideoPreview').style.display = 'none';
+    const localPreviewVideo = document.getElementById('localPreviewVideo');
+    if (localPreviewVideo.srcObject) {
+        localPreviewVideo.srcObject.getTracks().forEach(t => t.stop());
+        localPreviewVideo.srcObject = null;
+    }
 }
+// =============== КОНЕЦ ИСПРАВЛЕНИЙ ЗВОНКОВ ===============
 
 function renderMessages(msgs) {
     const container = document.getElementById('messagesArea');
@@ -1181,17 +1372,24 @@ function renderUnreadCounts() {
     });
 }
 
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ calculateUnreadCounts
 async function calculateUnreadCounts() {
     if (!currentUser) return;
     const chatsSnap = await db.ref('chats').once('value');
     const newUnreadCounts = {};
     
-    for (let child of chatsSnap) {
+    chatsSnap.forEach(child => {
         const chat = child.val();
         const chatId = child.key;
-        if (chatId === SAVED_CHAT_ID || chatId === AI_ID) continue;
-        if (!chat.participants || !chat.participants[currentUser.uid]) continue;
+        if (chatId === SAVED_CHAT_ID || chatId === AI_ID) return;
+        if (!chat.participants || !chat.participants[currentUser.uid]) return;
         
+        // Здесь мы не можем синхронно считать, поэтому асинхронный подсчёт вынесем
+        newUnreadCounts[chatId] = 0; // временно 0, потом пересчитаем
+    });
+    
+    // Асинхронный пересчёт для каждого чата
+    for (let chatId in newUnreadCounts) {
         const msgsSnap = await db.ref(`messages/${chatId}`).once('value');
         let unread = 0;
         msgsSnap.forEach(msgChild => {
@@ -1417,5 +1615,4 @@ async function startApp() {
 applyTheme();
 })();
 </script>
-</body>
-</html>
+</</html>
