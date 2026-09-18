@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>О Wolf Messenger</title>
+    <link rel="icon" type="image/png" href="https://i.ibb.co/0R0vY6MB/IMG-20260819-130738-761.jpg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #0a1a1a;
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ===== ФОНОВОЕ СВЕЧЕНИЕ ===== */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 20% 20%, rgba(46, 125, 100, 0.15), transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(155, 89, 182, 0.1), transparent 50%);
+            z-index: -1;
+            animation: bgPulse 20s ease-in-out infinite;
+        }
+        @keyframes bgPulse {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(5deg); }
+        }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+
+        /* ===== ПЛАВНАЯ АНИМАЦИЯ ПОЯВЛЕНИЯ БЛОКОВ ===== */
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(60px) scale(0.96);
+            filter: blur(6px);
+            transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+                        filter 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: opacity, transform, filter;
+        }
+        .scroll-reveal.revealed {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0);
+        }
+        /* Блоки, которые уже были видны — не анимируем */
+        .scroll-reveal.no-animate {
+            opacity: 1 !important;
+            transform: none !important;
+            filter: none !important;
+            transition: none !important;
+        }
+        
+        /* ===== ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКОВ ===== */
+.lang-switcher {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.lang-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(26, 42, 42, 0.9);
+    border: 1px solid rgba(58, 154, 122, 0.4);
+    border-radius: 30px;
+    color: #d0e0e0;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-family: inherit;
+    backdrop-filter: blur(8px);
+}
+.lang-btn:hover {
+    background: rgba(46, 125, 100, 0.2);
+    border-color: rgba(58, 154, 122, 0.7);
+    transform: translateY(-2px);
+}
+.lang-btn .flag {
+    font-size: 18px;
+    line-height: 1;
+}
+.lang-btn .arrow {
+    font-size: 10px;
+    opacity: 0.6;
+    transition: transform 0.25s ease;
+}
+.lang-switcher.open .lang-btn .arrow {
+    transform: rotate(180deg);
+}
+
+.lang-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 200px;
+    background: rgba(26, 42, 42, 0.98);
+    border: 1px solid rgba(58, 154, 122, 0.4);
+    border-radius: 16px;
+    padding: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: all 0.25s ease;
+    overflow: hidden;
+}
+.lang-switcher.open .lang-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+.lang-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    color: #d0e0e0;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    text-decoration: none;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+    font-family: inherit;
+}
+.lang-item:hover {
+    background: rgba(46, 125, 100, 0.2);
+}
+.lang-item.active {
+    background: rgba(46, 125, 100, 0.3);
+    color: #3a9a7a;
+    font-weight: 700;
+}
+.lang-item .flag {
+    font-size: 20px;
+    line-height: 1;
+}
+.lang-item .check {
+    margin-left: auto;
+    color: #3a9a7a;
+    font-size: 14px;
+    opacity: 0;
+}
+.lang-item.active .check {
+    opacity: 1;
+}
+
+@media (max-width: 600px) {
+    .lang-switcher { top: 12px; right: 12px; }
+    .lang-btn { padding: 6px 12px; font-size: 13px; }
+    .lang-btn .flag { font-size: 16px; }
+}
+
+        /* ===== ХЕДЕР С ЛОГОТИПОМ ===== */
+        .hero {
+            text-align: center;
+            padding: 60px 20px 40px;
+            position: relative;
+        }
+        .hero-logo-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 24px;
+        }
+        .hero-logo-wrapper::before {
+            content: '';
+            position: absolute;
+            inset: -10px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, #2e7d64, #3a9a7a, #9b59b6, #2e7d64);
+            animation: rotate 4s linear infinite;
+            opacity: 0.6;
+            filter: blur(10px);
+        }
+        @keyframes rotate {
+            to { transform: rotate(360deg); }
+        }
+        .hero-logo {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: block;
+            position: relative;
+            border: 4px solid #0a1a1a;
+            object-fit: cover;
+            background: #1a2a2a;
+        }
+        .hero h1 {
+            font-size: 42px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #3a9a7a, #9b59b6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -1px;
+            margin-bottom: 12px;
+        }
+        .hero p {
+            color: #8aaeb0;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        /* ===== СТАТИСТИКА ===== */
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            flex-wrap: wrap;
+            margin-top: 24px;
+        }
+        .stat { text-align: center; }
+        .stat-value {
+            font-size: 28px;
+            font-weight: 800;
+            color: #3a9a7a;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #8aaeb0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ===== СЕКЦИИ С ЗАГОЛОВКАМИ ===== */
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 60px 0 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 28px;
+            background: linear-gradient(180deg, #3a9a7a, #9b59b6);
+            border-radius: 2px;
+        }
+
+        /* ===== КАРТОЧКИ ===== */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+        }
+        .card {
+            background: linear-gradient(135deg, rgba(26, 42, 42, 0.9), rgba(15, 26, 26, 0.9));
+            border: 1px solid rgba(42, 58, 58, 0.8);
+            border-radius: 20px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+            backdrop-filter: blur(10px);
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #2e7d64, #3a9a7a);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(58, 154, 122, 0.6);
+            box-shadow: 0 20px 40px rgba(46, 125, 100, 0.15);
+        }
+        .card:hover::before {
+            transform: scaleX(1);
+        }
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(46, 125, 100, 0.2), rgba(58, 154, 122, 0.1));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(58, 154, 122, 0.3);
+        }
+        .card h3 {
+            font-size: 17px;
+            margin-bottom: 8px;
+            color: white;
+        }
+        .card p {
+            font-size: 14px;
+            color: #8aaeb0;
+            line-height: 1.5;
+        }
+
+        /* ===== ВОЗМОЖНОСТИ ===== */
+        .features-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 12px;
+        }
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 18px;
+            background: rgba(26, 42, 42, 0.6);
+            border-radius: 14px;
+            border: 1px solid rgba(42, 58, 58, 0.5);
+            transition: all 0.3s;
+            cursor: default;
+        }
+        .feature:hover {
+            background: rgba(46, 125, 100, 0.1);
+            border-color: rgba(58, 154, 122, 0.4);
+            transform: translateX(6px);
+        }
+        .feature-emoji {
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+        .feature-text {
+            font-size: 14px;
+            color: #d0e0e0;
+        }
+
+        /* ===== КОМАНДА ===== */
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .team-card {
+            background: linear-gradient(135deg, rgba(26, 42, 42, 0.9), rgba(15, 26, 26, 0.9));
+            border-radius: 24px;
+            padding: 32px 24px;
+            text-align: center;
+            border: 1px solid rgba(42, 58, 58, 0.8);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s;
+        }
+        .team-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 25px 50px rgba(46, 125, 100, 0.2);
+        }
+        .team-card::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(58, 154, 122, 0.15), transparent 60%);
+            opacity: 0;
+            transition: opacity 0.4s;
+            pointer-events: none;
+        }
+        .team-card:hover::before { opacity: 1; }
+        .team-avatar-wrapper {
+            position: relative;
+            width: 90px;
+            height: 90px;
+            margin: 0 auto 16px;
+        }
+        .team-avatar-wrapper::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, #2e7d64, #9b59b6, #2e7d64);
+            animation: rotate 6s linear infinite;
+            z-index: 0;
+        }
+        .team-avatar {
+            position: relative;
+            z-index: 1;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: #0f1a1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            border: 3px solid #0a1a1a;
+        }
+        .team-name {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 4px;
+            color: white;
+        }
+        .team-role {
+            font-size: 13px;
+            color: #8aaeb0;
+            margin-bottom: 20px;
+        }
+        .team-links {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+        .team-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 24px;
+            background: rgba(46, 125, 100, 0.15);
+            color: #3a9a7a;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            border: 1px solid rgba(58, 154, 122, 0.3);
+            transition: all 0.3s;
+        }
+        .team-link:hover {
+            background: rgba(46, 125, 100, 0.3);
+            transform: translateY(-2px);
+        }
+        .team-link.youtube {
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff6b6b;
+            border-color: rgba(255, 0, 0, 0.3);
+        }
+        .team-link.youtube:hover {
+            background: rgba(255, 0, 0, 0.25);
+        }
+        
+        /* ===== НАДПИСЬ "И ДРУГИЕ РАЗРАБОТЧИКИ" ===== */
+.team-more {
+    text-align: center;
+    margin-top: 24px;
+    padding: 20px;
+    background: rgba(26, 42, 42, 0.6);
+    border-radius: 16px;
+    border: 1px dashed rgba(58, 154, 122, 0.4);
+}
+.team-more p {
+    color: #8aaeb0;
+    font-size: 15px;
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.team-more p::before,
+.team-more p::after {
+    content: '✨';
+    font-size: 18px;
+}
+
+        /* ===== FAQ ===== */
+        .faq-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .faq-item {
+            background: rgba(26, 42, 42, 0.6);
+            border-radius: 16px;
+            border: 1px solid rgba(42, 58, 58, 0.5);
+            overflow: hidden;
+            transition: border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                        box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                        background 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .faq-item.open {
+            border-color: rgba(58, 154, 122, 0.5);
+            background: rgba(26, 42, 42, 0.8);
+            box-shadow: 0 10px 30px rgba(46, 125, 100, 0.1);
+        }
+        .faq-question {
+            padding: 18px 22px;
+            font-weight: 600;
+            color: #d0e0e0;
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            user-select: none;
+            transition: color 0.3s;
+        }
+        .faq-question:hover { color: #3a9a7a; }
+        .faq-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(58, 154, 122, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #3a9a7a;
+            font-size: 14px;
+            font-weight: 700;
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        background 0.4s;
+            flex-shrink: 0;
+        }
+        .faq-item.open .faq-icon {
+            transform: rotate(135deg);
+            background: rgba(58, 154, 122, 0.4);
+        }
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                        padding 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                        opacity 0.6s ease;
+            color: #b0c4c4;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 0 22px;
+            opacity: 0;
+        }
+        .faq-item.open .faq-answer {
+            max-height: 500px;
+            padding: 0 22px 18px;
+            opacity: 1;
+        }
+        
+        /* ===== КНОПКА "РАССКАЗАТЬ ДРУГУ" ===== */
+.share-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 24px;
+    margin-bottom: 32px;
+    background: rgba(46, 125, 100, 0.15);
+    color: #3a9a7a;
+    border: 1px solid rgba(58, 154, 122, 0.3);
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-family: inherit;
+}
+.share-btn:hover {
+    background: rgba(46, 125, 100, 0.3);
+    transform: translateY(-2px);
+    border-color: rgba(58, 154, 122, 0.6);
+}
+.share-btn:active {
+    transform: translateY(0) scale(0.97);
+}
+.share-btn.copied {
+    background: rgba(46, 204, 113, 0.2);
+    border-color: rgba(46, 204, 113, 0.5);
+    color: #2ecc71;
+}
+
+        /* ===== ФУТЕР ===== */
+        .footer {
+            text-align: center;
+            padding: 80px 20px 40px;
+            color: #8aaeb0;
+            font-size: 13px;
+        }
+        .footer-logo {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 14px 32px;
+            border-radius: 40px;
+            background: linear-gradient(135deg, #2e7d64, #1e6350);
+            transition: all 0.3s;
+            margin-top: 20px;
+            box-shadow: 0 10px 30px rgba(46, 125, 100, 0.3);
+        }
+        .back-link:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(46, 125, 100, 0.5);
+        }
+
+        /* ===== ПРОГРЕСС-БАР СКРОЛЛА ===== */
+        .scroll-progress {
+            position: fixed;
+            top: 0; left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #2e7d64, #3a9a7a, #9b59b6);
+            width: 0%;
+            z-index: 9999;
+            transition: width 0.1s linear;
+            box-shadow: 0 0 10px rgba(58, 154, 122, 0.6);
+        }
+
+        /* ===== КНОПКА ВВЕРХ ===== */
+        .scroll-top {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2e7d64, #1e6350);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 30px rgba(46, 125, 100, 0.4);
+            z-index: 9998;
+        }
+        .scroll-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .scroll-top:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 15px 40px rgba(46, 125, 100, 0.6);
+        }
+
+        @media (max-width: 600px) {
+            .hero h1 { font-size: 32px; }
+            .section-title { font-size: 20px; margin: 40px 0 16px; }
+            .stats { gap: 20px; }
+            .stat-value { font-size: 22px; }
+            .scroll-reveal { transform: translateY(40px) scale(0.98); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКОВ ===== -->
+<div class="lang-switcher" id="langSwitcher">
+    <button class="lang-btn" id="langBtn">
+        <span class="flag" id="currentFlag">🇷🇺</span>
+        <span id="currentLang">Русский</span>
+        <span class="arrow">▼</span>
+    </button>
+    <div class="lang-menu">
+        <button class="lang-item active" data-lang="ru">
+            <span class="flag">🇷🇺</span> Русский <span class="check">✓</span>
+        </button>
+        <button class="lang-item" data-lang="en">
+            <span class="flag">🇬🇧</span> English <span class="check">✓</span>
+        </button>
+        <button class="lang-item" data-lang="es">
+            <span class="flag">🇪🇸</span> Español <span class="check">✓</span>
+        </button>
+        <button class="lang-item" data-lang="no">
+            <span class="flag">🇳🇴</span> Norsk <span class="check">✓</span>
+        </button>
+        <button class="lang-item" data-lang="zh">
+            <span class="flag">🇨🇳</span> 中文 <span class="check">✓</span>
+        </button>
+        <button class="lang-item" data-lang="tr">
+            <span class="flag">🇹🇷</span> Türkçe <span class="check">✓</span>
+        </button>
+    </div>
+</div>
+
+    <!-- ===== ПРОГРЕСС-БАР ===== -->
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <div class="container">
+
+        <!-- ===== ХЕДЕР ===== -->
+        <div class="hero">
+            <div class="hero-logo-wrapper">
+                <img src="https://i.ibb.co/0R0vY6MB/IMG-20260819-130738-761.jpg" 
+                     alt="Wolf Messenger" 
+                     class="hero-logo"
+                     onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'font-size:60px;\'>🐺</div>'">
+            </div>
+            <h1>Wolf Messenger</h1>
+            <p>Мессенджер от команды TemniyWolF</p>
+            
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value">v1.0</div>
+                    <div class="stat-label">Версия</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">100%</div>
+                    <div class="stat-label">Бесплатно</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">24/7</div>
+                    <div class="stat-label">Онлайн</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== ЧТО ЭТО ===== -->
+        <h2 class="section-title scroll-reveal">Что такое Wolf Messenger</h2>
+        <div class="cards-grid">
+            <div class="card scroll-reveal">
+                <div class="card-icon">⚡</div>
+                <h3>Быстрый</h3>
+                <p>Сообщения доставляются мгновенно. Никаких задержек и лагов.</p>
+            </div>
+            <div class="card scroll-reveal">
+                <div class="card-icon">🔒</div>
+                <h3>Приватный</h3>
+                <p>Твои переписки под защитой. Мы не читаем сообщения.</p>
+            </div>
+            <div class="card scroll-reveal">
+                <div class="card-icon">🎨</div>
+                <h3>Красивый</h3>
+                <p>4 темы, формы аватарок и кастомизация под тебя.</p>
+            </div>
+            <div class="card scroll-reveal">
+                <div class="card-icon">🆓</div>
+                <h3>Бесплатный</h3>
+                <p>Все основные функции без ограничений и подписок.</p>
+            </div>
+        </div>
+
+        <!-- ===== ВОЗМОЖНОСТИ ===== -->
+        <h2 class="section-title scroll-reveal">Возможности</h2>
+        <div class="features-list">
+            <div class="feature scroll-reveal"><span class="feature-emoji">💬</span><span class="feature-text">Личные и групповые чаты</span></div>
+            <div class="feature scroll-reveal"><span class="feature-emoji">🎙️</span><span class="feature-text">Голосовые сообщения</span></div>
+            <div class="feature scroll-reveal"><span class="feature-emoji">📹</span><span class="feature-text">Видео-кружочки</span></div>
+            <div class="feature scroll-reveal"><span class="feature-emoji">📞</span><span class="feature-text">Аудио и видео-звонки</span></div>
+            <div class="feature scroll-reveal"><span class="feature-emoji">😊</span><span class="feature-text">Стикеры и эмодзи</span></div>
+            <div class="feature scroll-reveal"><span class="feature-emoji">📸</span><span class="feature-text">Истории на 24 часа</span></div>
+            <div class="feature scroll-reveal"><span class="feature-emoji">🤖</span><span class="feature-text">ИИ-ассистент Wolf AI</span></div>
+            <div class="feature scroll-reveal"><span class="feature-emoji">🎁</span><span class="feature-text">Магазин и подарки</span></div>
+            <div class="feature scroll-reveal"><span class="feature-emoji">🎵</span><span class="feature-text">Музыка в профиле</span></div>
+            <div class="feature scroll-reveal"><span class="feature-emoji">⚙️</span><span class="feature-text">Кастомизация тем</span></div>
+        </div>
+
+        <!-- ===== КОМАНДА ===== -->
+        <h2 class="section-title scroll-reveal">Команда TemniyWolF</h2>
+        <div class="team-grid">
+            
+            <div class="team-card scroll-reveal">
+                <div class="team-avatar-wrapper">
+                    <div class="team-avatar" style="background-image: url('https://i.ibb.co/nqQDDgNy/channels4-profile.jpg'); background-size: cover; background-position: center;"></div>
+                </div>
+                <div class="team-name">WolFer</div>
+                <div class="team-role">Один из разработчиков команды</div>
+                <div class="team-links">
+                    <a href="https://www.youtube.com/@WolFer-q4u" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       class="team-link youtube">
+                        <i class="fab fa-youtube"></i> YouTube
+                    </a>
+                </div>
+            </div>
+            
+            <!-- ⭐ Temniy -->
+<div class="team-card scroll-reveal">
+    <div class="team-avatar-wrapper">
+        <div class="team-avatar" style="background-image: url('https://i.ibb.co/ZzCPmRTP/IMG-20260916-194036-590.jpg'); background-size: cover; background-position: center;"></div>
+    </div>
+    <div class="team-name">Temniy</div>
+    <div class="team-role">Разработчик и главный дизайнер команды</div>
+    <div class="team-links">
+        <a href="https://youtube.com/@temn1yy?si=Y65RGEuRZNkgMHIU" 
+           target="_blank" 
+           rel="noopener noreferrer"
+           class="team-link youtube">
+            <i class="fab fa-youtube"></i> YouTube
+        </a>
+    </div>
+</div>
+
+<!-- ⭐ Надпись про других разработчиков -->
+<div class="team-more scroll-reveal">
+    <p>и другие разработчики в этом канале</p>
+</div>
+
+            <div class="team-card scroll-reveal">
+                <div class="team-avatar-wrapper">
+                    <div class="team-avatar">🌑</div>
+                </div>
+                <div class="team-name">TemniyWolF</div>
+                <div class="team-role">Команда разработчиков</div>
+                <div class="team-links">
+                    <a href="https://www.youtube.com/@TemniyWolF" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       class="team-link youtube">
+                        <i class="fab fa-youtube"></i> YouTube
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ===== FAQ ===== -->
+        <h2 class="section-title scroll-reveal">Частые вопросы</h2>
+        <div class="faq-list">
+            
+            <div class="faq-item scroll-reveal">
+                <div class="faq-question">
+                    Мессенджер бесплатный?
+                    <span class="faq-icon">+</span>
+                </div>
+                <div class="faq-answer">
+                    Да, основные функции полностью бесплатны: чаты, звонки, стикеры, истории. 
+                    Платные опции — это подарки и подписки, но они не обязательны.
+                </div>
+            </div>
+
+            <div class="faq-item scroll-reveal">
+                <div class="faq-question">
+                    Как удалить сообщение?
+                    <span class="faq-icon">+</span>
+                </div>
+                <div class="faq-answer">
+                    Зажмите сообщение пальцем (или кликните правой кнопкой) → выберите 
+                    «Удалить». Свои сообщения можно удалять в любое время.
+                </div>
+            </div>
+
+            <div class="faq-item scroll-reveal">
+                <div class="faq-question">
+                    Как добавить в группу?
+                    <span class="faq-icon">+</span>
+                </div>
+                <div class="faq-answer">
+                    Откройте группу → нажмите на аватар группы → введите ник нового 
+                    участника → нажмите «Добавить».
+                </div>
+            </div>
+
+            <div class="faq-item scroll-reveal">
+                <div class="faq-question">
+                    Что такое волчата?
+                    <span class="faq-icon">+</span>
+                </div>
+                <div class="faq-answer">
+                    Волчата 🐺 — это внутренняя валюта. Их можно заработать, получить в подарок 
+                    или купить. Тратятся на подарки друзьям и подписки.
+                </div>
+            </div>
+
+            <div class="faq-item scroll-reveal">
+                <div class="faq-question">
+                    Как связаться с поддержкой?
+                    <span class="faq-icon">+</span>
+                </div>
+                <div class="faq-answer">
+                    В настройках внизу есть ссылка «Поддержка / Идеи / Магазин» — 
+                    напишите нам, и мы ответим.
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ===== ФУТЕР ===== -->
+<div class="footer scroll-reveal">
+    
+    <!-- Кнопка "Рассказать другу" -->
+    <button class="share-btn" id="shareBtn" title="Скопировать ссылку">
+        <i class="fas fa-share-alt"></i> Рассказать другу о мессенджере
+    </button>
+    
+    <div class="footer-logo">🐺</div>
+    <p><strong>Wolf Messenger</strong> 2026 TemniyWolF</p>
+    <p style="margin-top: 6px; font-size: 12px;">Сделано с ❤️ командой TemniyWolF</p>
+    <a href="/" class="back-link">
+        <i class="fas fa-arrow-left"></i> Вернуться в мессенджер
+    </a>
+</div>
+
+    </div>
+
+    <!-- ===== КНОПКА ВВЕРХ ===== -->
+    <button class="scroll-top" id="scrollTopBtn" title="Наверх">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <script>
+        // ===== ПЛАВНОЕ ПОЯВЛЕНИЕ ПРИ СКРОЛЛЕ =====
+        var revealObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    // Небольшая задержка для более плавного появления
+                    var delay = parseFloat(entry.target.style.transitionDelay) || 0;
+                    setTimeout(function() {
+                        entry.target.classList.add('revealed');
+                    }, delay * 1000);
+                    
+                    // Отписываемся — больше не наблюдаем за этим элементом
+                    revealObserver.unobserve(entry.target);
+                }
+            });
+        }, {
+            threshold: 0.08,
+            rootMargin: '0px 0px -80px 0px'
+        });
+
+        // Наблюдаем за всеми элементами с классом scroll-reveal
+        document.querySelectorAll('.scroll-reveal').forEach(function(el, index) {
+            // Задержка 0.05с для каждого элемента в группе
+            el.style.transitionDelay = (index % 4) * 0.12 + 's';
+            revealObserver.observe(el);
+        });
+
+        // Если элемент уже виден при загрузке — показываем сразу
+        window.addEventListener('load', function() {
+            document.querySelectorAll('.scroll-reveal').forEach(function(el) {
+                var rect = el.getBoundingClientRect();
+                if (rect.top < window.innerHeight * 0.9) {
+                    el.style.transitionDelay = '0s';
+                    el.classList.add('revealed');
+                }
+            });
+        });
+
+        // ===== ПРОГРЕСС-БАР =====
+        var progressBar = document.getElementById('scrollProgress');
+        var ticking = false;
+        window.addEventListener('scroll', function() {
+            if (!ticking) {
+                window.requestAnimationFrame(function() {
+                    var scrollTop = window.scrollY;
+                    var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+                    var progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+                    progressBar.style.width = progress + '%';
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        });
+
+        // ===== КНОПКА ВВЕРХ =====
+        var scrollTopBtn = document.getElementById('scrollTopBtn');
+        window.addEventListener('scroll', function() {
+            if (window.scrollY > 400) {
+                scrollTopBtn.classList.add('visible');
+            } else {
+                scrollTopBtn.classList.remove('visible');
+            }
+        });
+        scrollTopBtn.onclick = function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        // ===== FAQ — плавное раскрытие =====
+        document.querySelectorAll('.faq-question').forEach(function(q) {
+            q.onclick = function() {
+                var item = q.parentElement;
+                var wasOpen = item.classList.contains('open');
+                
+                // Закрываем все открытые
+                document.querySelectorAll('.faq-item.open').forEach(function(i) {
+                    i.classList.remove('open');
+                });
+                
+                // Если был закрыт — открываем
+                if (!wasOpen) {
+                    item.classList.add('open');
+                }
+            };
+        });
+        
+        // ===== КНОПКА "РАССКАЗАТЬ ДРУГУ" =====
+var shareBtn = document.getElementById('shareBtn');
+if (shareBtn) {
+    shareBtn.onclick = function() {
+        var messengerUrl = 'https://myapp-blush-eight.vercel.app/';
+        var shareText = '🐺 Попробуй Wolf Messenger — бесплатный мессенджер от команды TemniyWolF!\n\n' + messengerUrl;
+        
+        // Пробуем через Clipboard API
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(shareText).then(function() {
+                showShareSuccess();
+            }).catch(function() {
+                fallbackCopy(shareText);
+            });
+        } else {
+            fallbackCopy(shareText);
+        }
+    };
+    
+    function fallbackCopy(text) {
+        // Старый способ через textarea
+        var textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            showShareSuccess();
+        } catch(e) {
+            console.warn('Не удалось скопировать:', e);
+        }
+        document.body.removeChild(textarea);
+    }
+    
+    function showShareSuccess() {
+        // Меняем текст кнопки на короткое время
+        var originalHTML = shareBtn.innerHTML;
+        shareBtn.classList.add('copied');
+        shareBtn.innerHTML = '<i class="fas fa-check"></i> Ссылка скопирована!';
+        
+        setTimeout(function() {
+            shareBtn.classList.remove('copied');
+            shareBtn.innerHTML = originalHTML;
+        }, 2500);
+    }
+}
+
+// ============================================================
+// 🌍 ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКОВ
+// ============================================================
+
+var translations = {
+    ru: {
+        hero_sub: 'Мессенджер от команды TemniyWolF',
+        version: 'Версия', free: 'Бесплатно', online: 'Онлайн',
+        what_title: 'Что такое Wolf Messenger',
+        what_fast: 'Быстрый', what_fast_d: 'Сообщения доставляются мгновенно. Никаких задержек и лагов.',
+        what_priv: 'Приватный', what_priv_d: 'Твои переписки под защитой. Мы не читаем сообщения.',
+        what_beauty: 'Красивый', what_beauty_d: '4 темы, формы аватарок и кастомизация под тебя.',
+        what_free: 'Бесплатный', what_free_d: 'Все основные функции без ограничений и подписок.',
+        feat_title: 'Возможности',
+        feat_1: 'Личные и групповые чаты', feat_2: 'Голосовые сообщения',
+        feat_3: 'Видео-кружочки', feat_4: 'Аудио и видео-звонки',
+        feat_5: 'Стикеры и эмодзи', feat_6: 'Истории на 24 часа',
+        feat_7: 'ИИ-ассистент Wolf AI', feat_8: 'Магазин и подарки',
+        feat_9: 'Музыка в профиле', feat_10: 'Кастомизация тем',
+        team_title: 'Команда TemniyWolF',
+        team_role_1: 'Один из разработчиков команды',
+        team_role_2: 'Команда разработчиков',
+        team_role_3: 'Разработчик и главный дизайнер команды',
+        team_more: 'и другие разработчики в этом канале',
+        faq_title: 'Частые вопросы',
+        faq_q1: 'Мессенджер бесплатный?',
+        faq_a1: 'Да, основные функции полностью бесплатны: чаты, звонки, стикеры, истории. Платные опции — это подарки и подписки, но они не обязательны.',
+        faq_q2: 'Как удалить сообщение?',
+        faq_a2: 'Зажмите сообщение пальцем (или кликните правой кнопкой) → выберите «Удалить». Свои сообщения можно удалять в любое время.',
+        faq_q3: 'Как добавить в группу?',
+        faq_a3: 'Откройте группу → нажмите на аватар группы → введите ник нового участника → нажмите «Добавить».',
+        faq_q4: 'Что такое волчата?',
+        faq_a4: 'Волчата 🐺 — это внутренняя валюта. Их можно заработать, получить в подарок или купить. Тратятся на подарки друзьям и подписки.',
+        faq_q5: 'Как связаться с поддержкой?',
+        faq_a5: 'В настройках внизу есть ссылка «Поддержка / Идеи / Магазин» — напишите нам, и мы ответим.',
+        footer_copy: 'Сделано с ❤️ командой TemniyWolF',
+        footer_back: 'Вернуться в мессенджер',
+        share_btn: 'Рассказать другу о мессенджере',
+        share_copied: 'Ссылка скопирована!'
+    },
+    en: {
+        hero_sub: 'Messenger by the TemniyWolF team',
+        version: 'Version', free: 'Free', online: 'Online',
+        what_title: 'What is Wolf Messenger',
+        what_fast: 'Fast', what_fast_d: 'Messages are delivered instantly. No delays or lags.',
+        what_priv: 'Private', what_priv_d: 'Your chats are protected. We do not read messages.',
+        what_beauty: 'Beautiful', what_beauty_d: '4 themes, avatar shapes and customization for you.',
+        what_free: 'Free', what_free_d: 'All core features without limits or subscriptions.',
+        feat_title: 'Features',
+        feat_1: 'Private and group chats', feat_2: 'Voice messages',
+        feat_3: 'Video circles', feat_4: 'Audio and video calls',
+        feat_5: 'Stickers and emoji', feat_6: '24-hour stories',
+        feat_7: 'AI assistant Wolf AI', feat_8: 'Shop and gifts',
+        feat_9: 'Music in profile', feat_10: 'Theme customization',
+        team_title: 'TemniyWolF Team',
+        team_role_1: 'One of the team developers',
+        team_role_2: 'Development team',
+        team_role_3: 'Developer and lead designer of the team',
+        team_more: 'and other developers on this channel',
+        faq_title: 'Frequently asked questions',
+        faq_q1: 'Is the messenger free?',
+        faq_a1: 'Yes, the core features are completely free: chats, calls, stickers, stories. Paid options are gifts and subscriptions, but they are optional.',
+        faq_q2: 'How to delete a message?',
+        faq_a2: 'Press and hold the message (or right-click) → select "Delete". You can delete your messages at any time.',
+        faq_q3: 'How to add to a group?',
+        faq_a3: 'Open the group → tap the group avatar → enter the new member\'s nickname → tap "Add".',
+        faq_q4: 'What are wolves?',
+        faq_a4: 'Wolves 🐺 is the internal currency. You can earn them, receive them as a gift or buy them. Spend them on gifts to friends and subscriptions.',
+        faq_q5: 'How to contact support?',
+        faq_a5: 'At the bottom of the settings there is a link "Support / Ideas / Shop" — write to us and we will reply.',
+        footer_copy: 'Made with ❤️ by the TemniyWolF team',
+        footer_back: 'Back to messenger',
+        share_btn: 'Tell a friend about the messenger',
+        share_copied: 'Link copied!'
+    },
+    es: {
+        hero_sub: 'Mensajería del equipo TemniyWolF',
+        version: 'Versión', free: 'Gratis', online: 'En línea',
+        what_title: 'Qué es Wolf Messenger',
+        what_fast: 'Rápido', what_fast_d: 'Los mensajes se entregan al instante. Sin retrasos ni lag.',
+        what_priv: 'Privado', what_priv_d: 'Tus chats están protegidos. No leemos los mensajes.',
+        what_beauty: 'Hermoso', what_beauty_d: '4 temas, formas de avatar y personalización para ti.',
+        what_free: 'Gratis', what_free_d: 'Todas las funciones principales sin límites ni suscripciones.',
+        feat_title: 'Funciones',
+        feat_1: 'Chats privados y grupales', feat_2: 'Mensajes de voz',
+        feat_3: 'Videocírculos', feat_4: 'Llamadas de audio y video',
+        feat_5: 'Stickers y emojis', feat_6: 'Historias de 24 horas',
+        feat_7: 'Asistente IA Wolf AI', feat_8: 'Tienda y regalos',
+        feat_9: 'Música en el perfil', feat_10: 'Personalización de temas',
+        team_title: 'Equipo TemniyWolF',
+        team_role_1: 'Uno de los desarrolladores del equipo',
+        team_role_2: 'Equipo de desarrollo',
+        team_role_3: 'Desarrollador y diseñador principal del equipo',
+        team_more: 'y otros desarrolladores en este canal',
+        faq_title: 'Preguntas frecuentes',
+        faq_q1: '¿El mensajero es gratis?',
+        faq_a1: 'Sí, las funciones principales son completamente gratis: chats, llamadas, stickers, historias. Las opciones de pago son regalos y suscripciones, pero son opcionales.',
+        faq_q2: '¿Cómo eliminar un mensaje?',
+        faq_a2: 'Mantén presionado el mensaje (o haz clic derecho) → selecciona "Eliminar". Puedes eliminar tus mensajes en cualquier momento.',
+        faq_q3: '¿Cómo agregar a un grupo?',
+        faq_a3: 'Abre el grupo → toca el avatar del grupo → ingresa el apodo del nuevo miembro → toca "Agregar".',
+        faq_q4: '¿Qué son los lobos?',
+        faq_a4: 'Los lobos 🐺 son la moneda interna. Puedes ganarlos, recibirlos como regalo o comprarlos. Se gastan en regalos para amigos y suscripciones.',
+        faq_q5: '¿Cómo contactar al soporte?',
+        faq_a5: 'En la parte inferior de la configuración hay un enlace "Soporte / Ideas / Tienda" — escríbenos y te responderemos.',
+        footer_copy: 'Hecho con ❤️ por el equipo TemniyWolF',
+        footer_back: 'Volver al mensajero',
+        share_btn: 'Cuéntale a un amigo sobre el mensajero',
+        share_copied: '¡Enlace copiado!'
+    },
+    no: {
+        hero_sub: 'Meldingstjeneste fra TemniyWolF-teamet',
+        version: 'Versjon', free: 'Gratis', online: 'Pålogget',
+        what_title: 'Hva er Wolf Messenger',
+        what_fast: 'Rask', what_fast_d: 'Meldinger leveres umiddelbart. Ingen forsinkelser eller lag.',
+        what_priv: 'Privat', what_priv_d: 'Chattene dine er beskyttet. Vi leser ikke meldinger.',
+        what_beauty: 'Vakker', what_beauty_d: '4 temaer, avatarmaler og tilpasning for deg.',
+        what_free: 'Gratis', what_free_d: 'Alle kjernefunksjoner uten begrensninger eller abonnementer.',
+        feat_title: 'Funksjoner',
+        feat_1: 'Private og gruppechatter', feat_2: 'Talemeldinger',
+        feat_3: 'Videosirkler', feat_4: 'Lyd- og videosamtaler',
+        feat_5: 'Klistremerker og emoji', feat_6: '24-timers historier',
+        feat_7: 'AI-assistent Wolf AI', feat_8: 'Butikk og gaver',
+        feat_9: 'Musikk i profilen', feat_10: 'Tilpasning av temaer',
+        team_title: 'TemniyWolF-teamet',
+        team_role_1: 'En av teamets utviklere',
+        team_role_2: 'Utviklingsteam',
+        team_role_3: 'Utvikler og hoveddesigner for teamet',
+        team_more: 'og andre utviklere på denne kanalen',
+        faq_title: 'Ofte stilte spørsmål',
+        faq_q1: 'Er meldingstjenesten gratis?',
+        faq_a1: 'Ja, kjernefunksjonene er helt gratis: chatter, samtaler, klistremerker, historier. Betalte alternativer er gaver og abonnementer, men de er valgfrie.',
+        faq_q2: 'Hvordan slette en melding?',
+        faq_a2: 'Trykk og hold meldingen (eller høyreklikk) → velg "Slett". Du kan slette meldingene dine når som helst.',
+        faq_q3: 'Hvordan legge til i en gruppe?',
+        faq_a3: 'Åpne gruppen → trykk på gruppeavataren → skriv inn det nye medlemmets kallenavn → trykk "Legg til".',
+        faq_q4: 'Hva er ulver?',
+        faq_a4: 'Ulver 🐺 er den interne valutaen. Du kan tjene dem, få dem som gave eller kjøpe dem. De brukes på gaver til venner og abonnementer.',
+        faq_q5: 'Hvordan kontakte support?',
+        faq_a5: 'Nederst i innstillingene er det en lenke "Support / Ideer / Butikk" — skriv til oss, og vi svarer.',
+        footer_copy: 'Laget med ❤️ av TemniyWolF-teamet',
+        footer_back: 'Tilbake til meldingstjenesten',
+        share_btn: 'Fortell en venn om meldingstjenesten',
+        share_copied: 'Lenken er kopiert!'
+    },
+    zh: {
+        hero_sub: 'TemniyWolF团队的即时通讯软件',
+        version: '版本', free: '免费', online: '在线',
+        what_title: '什么是 Wolf Messenger',
+        what_fast: '快速', what_fast_d: '消息即时送达。没有延迟或卡顿。',
+        what_priv: '私密', what_priv_d: '您的聊天受到保护。我们不读取消息。',
+        what_beauty: '美观', what_beauty_d: '4种主题、头像形状和个性化定制。',
+        what_free: '免费', what_free_d: '所有核心功能无限制、无订阅。',
+        feat_title: '功能',
+        feat_1: '私人和群组聊天', feat_2: '语音消息',
+        feat_3: '视频圈', feat_4: '音频和视频通话',
+        feat_5: '贴纸和表情', feat_6: '24小时故事',
+        feat_7: 'AI助手 Wolf AI', feat_8: '商店和礼物',
+        feat_9: '个人资料中的音乐', feat_10: '主题定制',
+        team_title: 'TemniyWolF 团队',
+        team_role_1: '团队开发者之一',
+        team_role_2: '开发团队',
+        team_role_3: '团队开发者和首席设计师',
+        team_more: '以及该频道的其他开发者',
+        faq_title: '常见问题',
+        faq_q1: '这个即时通讯软件免费吗？',
+        faq_a1: '是的，核心功能完全免费：聊天、通话、贴纸、故事。付费选项是礼物和订阅，但它们是可选的。',
+        faq_q2: '如何删除消息？',
+        faq_a2: '长按消息（或右键单击）→ 选择"删除"。您可以随时删除自己的消息。',
+        faq_q3: '如何添加到群组？',
+        faq_a3: '打开群组 → 点击群组头像 → 输入新成员的昵称 → 点击"添加"。',
+        faq_q4: '什么是狼币？',
+        faq_a4: '狼币 🐺 是内部货币。您可以赚取、作为礼物收到或购买。用于给朋友送礼物和订阅。',
+        faq_q5: '如何联系支持？',
+        faq_a5: '在设置底部有一个"支持/想法/商店"链接——写信给我们，我们会回复。',
+        footer_copy: '由 TemniyWolF 团队用 ❤️ 制作',
+        footer_back: '返回即时通讯',
+        share_btn: '告诉朋友这个即时通讯软件',
+        share_copied: '链接已复制！'
+    },
+    tr: {
+        hero_sub: 'TemniyWolF ekibinden mesajlaşma uygulaması',
+        version: 'Sürüm', free: 'Ücretsiz', online: 'Çevrimiçi',
+        what_title: 'Wolf Messenger nedir',
+        what_fast: 'Hızlı', what_fast_d: 'Mesajlar anında iletilir. Gecikme veya takılma yok.',
+        what_priv: 'Gizli', what_priv_d: 'Sohbetleriniz korunuyor. Mesajları okumuyoruz.',
+        what_beauty: 'Güzel', what_beauty_d: '4 tema, avatar şekilleri ve size özel kişiselleştirme.',
+        what_free: 'Ücretsiz', what_free_d: 'Tüm temel özellikler sınırsız ve aboneliksiz.',
+        feat_title: 'Özellikler',
+        feat_1: 'Özel ve grup sohbetleri', feat_2: 'Sesli mesajlar',
+        feat_3: 'Video daireleri', feat_4: 'Sesli ve görüntülü aramalar',
+        feat_5: 'Çıkartmalar ve emoji', feat_6: '24 saatlik hikayeler',
+        feat_7: 'Yapay zeka asistanı Wolf AI', feat_8: 'Mağaza ve hediyeler',
+        feat_9: 'Profilde müzik', feat_10: 'Tema kişiselleştirme',
+        team_title: 'TemniyWolF Ekibi',
+        team_role_1: 'Ekip geliştiricilerinden biri',
+        team_role_2: 'Geliştirme ekibi',
+        team_role_3: 'Ekip geliştiricisi ve baş tasarımcısı',
+        team_more: 've bu kanaldaki diğer geliştiriciler',
+        faq_title: 'Sık sorulan sorular',
+        faq_q1: 'Mesajlaşma uygulaması ücretsiz mi?',
+        faq_a1: 'Evet, temel özellikler tamamen ücretsizdir: sohbetler, aramalar, çıkartmalar, hikayeler. Ücretli seçenekler hediyeler ve aboneliklerdir ancak isteğe bağlıdır.',
+        faq_q2: 'Bir mesaj nasıl silinir?',
+        faq_a2: 'Mesaja basılı tutun (veya sağ tıklayın) → "Sil"i seçin. Kendi mesajlarınızı istediğiniz zaman silebilirsiniz.',
+        faq_q3: 'Bir gruba nasıl eklenir?',
+        faq_a3: 'Grubu açın → grup avatarına dokunun → yeni üyenin takma adını girin → "Ekle"ye dokunun.',
+        faq_q4: 'Kurtlar nedir?',
+        faq_a4: 'Kurtlar 🐺 dahili para birimidir. Kazanabilir, hediye olarak alabilir veya satın alabilirsiniz. Arkadaşlara hediyeler ve abonelikler için harcanır.',
+        faq_q5: 'Desteğe nasıl ulaşılır?',
+        faq_a5: 'Ayarların altında "Destek / Fikirler / Mağaza" bağlantısı var — bize yazın, cevap vereceğiz.',
+        footer_copy: 'TemniyWolF ekibi tarafından ❤️ ile yapıldı',
+        footer_back: 'Mesajlaşmaya geri dön',
+        share_btn: 'Arkadaşına mesajlaşma uygulamasından bahset',
+        share_copied: 'Bağlantı kopyalandı!'
+    }
+};
+
+var langFlags = { ru: '🇷🇺', en: '🇬🇧', es: '🇪🇸', no: '🇳🇴', zh: '🇨🇳', tr: '🇹🇷' };
+var langNames = { ru: 'Русский', en: 'English', es: 'Español', no: 'Norsk', zh: '中文', tr: 'Türkçe' };
+
+// Сохраняем оригинальные тексты при загрузке
+var originalTexts = {};
+
+function initLangSwitcher() {
+    var switcher = document.getElementById('langSwitcher');
+    var btn = document.getElementById('langBtn');
+    
+    if (!switcher || !btn) return;
+    
+    // Клик по кнопке — открыть/закрыть меню
+    btn.onclick = function(e) {
+        e.stopPropagation();
+        switcher.classList.toggle('open');
+    };
+    
+    // Клик вне меню — закрыть
+    document.addEventListener('click', function(e) {
+        if (!switcher.contains(e.target)) {
+            switcher.classList.remove('open');
+        }
+    });
+    
+    // Клик по языку
+    document.querySelectorAll('.lang-item').forEach(function(item) {
+        item.onclick = function() {
+            var lang = item.dataset.lang;
+            changeLanguage(lang);
+            switcher.classList.remove('open');
+            
+            // Обновляем активный язык
+            document.querySelectorAll('.lang-item').forEach(function(i) {
+                i.classList.toggle('active', i.dataset.lang === lang);
+            });
+            
+            // Обновляем кнопку
+            document.getElementById('currentFlag').textContent = langFlags[lang];
+            document.getElementById('currentLang').textContent = langNames[lang];
+            
+            // Сохраняем выбор
+            localStorage.setItem('about_lang', lang);
+        };
+    });
+    
+    // Загружаем сохранённый язык
+    var savedLang = localStorage.getItem('about_lang') || 'ru';
+    if (savedLang !== 'ru') {
+        changeLanguage(savedLang);
+        document.querySelectorAll('.lang-item').forEach(function(i) {
+            i.classList.toggle('active', i.dataset.lang === savedLang);
+        });
+        document.getElementById('currentFlag').textContent = langFlags[savedLang];
+        document.getElementById('currentLang').textContent = langNames[savedLang];
+    }
+}
+
+function changeLanguage(lang) {
+    var t = translations[lang];
+    if (!t) return;
+    
+    // Собираем элементы для перевода
+    function setText(selector, text) {
+        document.querySelectorAll(selector).forEach(function(el) {
+            el.textContent = text;
+        });
+    }
+    
+    // Hero
+    document.querySelector('.hero p').textContent = t.hero_sub;
+    document.querySelectorAll('.stat-label')[0].textContent = t.version;
+    document.querySelectorAll('.stat-label')[1].textContent = t.free;
+    document.querySelectorAll('.stat-label')[2].textContent = t.online;
+    
+    // What
+    document.querySelectorAll('.section-title')[0].textContent = t.what_title;
+    document.querySelectorAll('.card h3')[0].textContent = t.what_fast;
+    document.querySelectorAll('.card p')[0].textContent = t.what_fast_d;
+    document.querySelectorAll('.card h3')[1].textContent = t.what_priv;
+    document.querySelectorAll('.card p')[1].textContent = t.what_priv_d;
+    document.querySelectorAll('.card h3')[2].textContent = t.what_beauty;
+    document.querySelectorAll('.card p')[2].textContent = t.what_beauty_d;
+    document.querySelectorAll('.card h3')[3].textContent = t.what_free;
+    document.querySelectorAll('.card p')[3].textContent = t.what_free_d;
+    
+    // Features
+    document.querySelectorAll('.section-title')[1].textContent = t.feat_title;
+    var featureTexts = document.querySelectorAll('.feature-text');
+    for (var i = 0; i < 10; i++) {
+        if (featureTexts[i]) featureTexts[i].textContent = t['feat_' + (i+1)];
+    }
+    
+    // Team
+    document.querySelectorAll('.section-title')[2].textContent = t.team_title;
+    document.querySelectorAll('.team-role')[0].textContent = t.team_role_1;
+    document.querySelectorAll('.team-role')[1].textContent = t.team_role_2;
+    document.querySelectorAll('.team-role')[2].textContent = t.team_role_3;
+    var teamMore = document.querySelector('.team-more p');
+    if (teamMore) teamMore.textContent = t.team_more;
+    
+    // FAQ
+    document.querySelectorAll('.section-title')[3].textContent = t.faq_title;
+    var questions = document.querySelectorAll('.faq-question');
+    var answers = document.querySelectorAll('.faq-answer');
+    for (var j = 0; j < 5; j++) {
+        if (questions[j]) {
+            // Сохраняем иконку +
+            var icon = questions[j].querySelector('.faq-icon');
+            questions[j].innerHTML = t['faq_q' + (j+1)] + (icon ? '<span class="faq-icon">+</span>' : '');
+        }
+        if (answers[j]) answers[j].textContent = t['faq_a' + (j+1)];
+    }
+    
+    // Перевешиваем обработчики на FAQ (так как innerHTML заменил содержимое)
+    document.querySelectorAll('.faq-question').forEach(function(q) {
+        q.onclick = function() {
+            var item = q.parentElement;
+            var wasOpen = item.classList.contains('open');
+            document.querySelectorAll('.faq-item.open').forEach(function(i) {
+                i.classList.remove('open');
+            });
+            if (!wasOpen) item.classList.add('open');
+        };
+    });
+    
+    // Footer
+    var footerCopy = document.querySelector('.footer p:nth-child(3)');
+    if (footerCopy) footerCopy.textContent = t.footer_copy;
+    var backLink = document.querySelector('.back-link');
+    if (backLink) {
+        backLink.innerHTML = '<i class="fas fa-arrow-left"></i> ' + t.footer_back;
+    }
+    var shareBtn = document.getElementById('shareBtn');
+    if (shareBtn && !shareBtn.classList.contains('copied')) {
+        shareBtn.innerHTML = '<i class="fas fa-share-alt"></i> ' + t.share_btn;
+    }
+    
+    // Обновляем заголовок вкладки
+    document.title = lang === 'ru' ? 'О Wolf Messenger' : 'About Wolf Messenger';
+}
+
+// Инициализация при загрузке
+window.addEventListener('load', function() {
+    initLangSwitcher();
+});
+    </script>
+</body>
+</html>
