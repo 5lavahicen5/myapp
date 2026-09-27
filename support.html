@@ -921,5 +921,316 @@
         }
     });
     </script>
+    <!-- ============================================================ -->
+<!-- 📜 МОДАЛЬНОЕ ОКНО: СОГЛАШЕНИЕ И ПОЛИТИКА (для support.html) -->
+<!-- Вставить перед </body>                                      -->
+<!-- ============================================================ -->
+
+<div id="legalModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:999999;display:none;align-items:center;justify-content:center;padding:12px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
+    <div style="background:#1a2a2a;border-radius:24px;width:100%;max-width:500px;height:92vh;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;border:2px solid #2e7d64;box-shadow:0 20px 60px rgba(0,0,0,0.7);">
+        <div style="padding:16px 20px;border-bottom:1px solid #2a3a3a;background:#0f1a1a;flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-size:28px;">🐺</span>
+                <div>
+                    <div style="font-weight:700;font-size:17px;color:#fff;">Добро пожаловать в Wolf Messenger</div>
+                    <div style="font-size:12px;color:#8aaeb0;margin-top:2px;">Перед началом работы ознакомьтесь с документами</div>
+                </div>
+            </div>
+        </div>
+        <div style="display:flex;border-bottom:1px solid #2a3a3a;background:#0f1a1a;flex-shrink:0;">
+            <button id="legalTabTerms" style="flex:1;padding:12px;background:transparent;border:none;border-bottom:3px solid transparent;color:#8aaeb0;cursor:pointer;font-size:14px;font-weight:600;">📜 Соглашение</button>
+            <button id="legalTabPrivacy" style="flex:1;padding:12px;background:transparent;border:none;border-bottom:3px solid transparent;color:#8aaeb0;cursor:pointer;font-size:14px;font-weight:600;">🔒 Политика</button>
+        </div>
+        <div id="legalContent" style="flex:1;overflow-y:auto;padding:20px;color:#fff;font-size:13.5px;line-height:1.6;white-space:pre-wrap;word-wrap:break-word;-webkit-overflow-scrolling:touch;"></div>
+        <div id="legalReadIndicator" style="padding:10px 20px;background:#0f1a1a;border-top:1px solid #2a3a3a;font-size:12px;color:#8aaeb0;text-align:center;flex-shrink:0;">📖 Прокрутите документ до конца, чтобы продолжить</div>
+        <div style="padding:14px 20px;background:#0f1a1a;border-top:1px solid #2a3a3a;flex-shrink:0;">
+            <label id="legalCheckLabel" style="display:flex;align-items:flex-start;gap:10px;cursor:not-allowed;opacity:0.5;">
+                <input type="checkbox" id="legalCheckbox" disabled style="width:20px;height:20px;margin-top:2px;cursor:not-allowed;flex-shrink:0;accent-color:#2e7d64;">
+                <span style="font-size:13px;color:#fff;line-height:1.4;">Я прочитал(а) и согласен(на) с <strong>Пользовательским соглашением</strong> и <strong>Политикой конфиденциальности</strong></span>
+            </label>
+        </div>
+        <div style="padding:0 20px 20px 20px;background:#0f1a1a;flex-shrink:0;">
+            <button id="legalAcceptBtn" disabled style="width:100%;padding:16px;border:none;border-radius:60px;font-size:16px;font-weight:700;cursor:not-allowed;background:#2a3a3a;color:#8aaeb0;opacity:0.5;">✅ Согласен(на)</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function initSupportLegalModal() {
+    'use strict';
+    
+    const LEGAL_STORAGE_KEY = 'wolf_legal_support_v1';
+    
+    const TERMS_TEXT = `
+ПОЛЬЗОВАТЕЛЬСКОЕ СОГЛАШЕНИЕ (ОФЕРТА)
+
+Дата последнего обновления: 27 сентября 2026 г.
+
+1. ОБЩИЕ ПОЛОЖЕНИЯ
+Настоящее Соглашение регулирует отношения между Администрацией мессенджера Wolf Messenger и Пользователем при отправке обращений через форму поддержки.
+
+2. ПРЕДМЕТ
+Администрация обрабатывает обращения Пользователей (поддержка, идеи, вопросы по магазину). Отправляя форму, Пользователь подтверждает согласие с настоящим Соглашением.
+
+3. ДАННЫЕ, КОТОРЫЕ ПЕРЕДАЮТСЯ
+Через форму поддержки Пользователь передаёт:
+• Никнейм в Wolf Messenger;
+• Адрес электронной почты для ответа;
+• Текст обращения;
+• Технические данные (тип браузера, user agent).
+
+4. ПРАВИЛА ОБРАЩЕНИЙ
+Пользователь обязуется НЕ:
+• Отправлять спам, рекламу, массовые рассылки;
+• Оскорблять Администрацию и третьих лиц;
+• Использовать форму для мошенничества;
+• Передавать чужие персональные данные без согласия.
+
+5. ОТВЕТСТВЕННОСТЬ
+Администрация рассматривает обращения в разумный срок, но не гарантирует моментальный ответ. Администрация вправе не отвечать на обращения, содержащие спам, оскорбления или заведомо ложную информацию.
+
+6. КОНТАКТЫ
+Оператор персональных данных: Волков Дмитрий Владимирович
+Контактный email: temniywolfsupport@gmail.com
+`;
+
+    const PRIVACY_TEXT = `
+ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ
+
+Дата последнего обновления: 27 сентября 2026 г.
+
+1. ОБЩИЕ ПОЛОЖЕНИЯ
+Настоящая Политика описывает, как Администрация Wolf Messenger обрабатывает данные, которые Пользователь передаёт через форму поддержки.
+
+Оператором персональных данных является Волков Дмитрий Владимирович.
+
+2. КАКИЕ ДАННЫЕ СОБИРАЮТСЯ
+Через форму поддержки:
+• Никнейм в Wolf Messenger;
+• Email для ответа;
+• Текст обращения;
+• User agent (тип браузера и устройства);
+• UID (если вы авторизованы в мессенджере).
+
+3. ЦЕЛИ ОБРАБОТКИ
+• Обработка обращений Пользователей;
+• Отправка ответа на указанный email;
+• Улучшение работы сервиса;
+• Предотвращение спама и злоупотреблений.
+
+4. ПРАВОВЫЕ ОСНОВАНИЯ
+• Согласие Пользователя (ст. 6 ФЗ-152);
+• Исполнение договора (Пользовательское соглашение).
+
+5. ПЕРЕДАЧА ДАННЫХ
+Данные хранятся в Google Firebase (США). Передача осуществляется для обеспечения работы сервиса. Мы не продаём ваши данные третьим лицам.
+
+6. СРОК ХРАНЕНИЯ
+Обращения хранятся 3 года с момента отправки.
+
+7. ПРАВА ПОЛЬЗОВАТЕЛЯ
+Вы имеете право запросить удаление своего обращения, написав на temniywolfsupport@gmail.com.
+
+8. КОНТАКТЫ
+Оператор персональных данных: Волков Дмитрий Владимирович
+По всем вопросам: temniywolfsupport@gmail.com
+`;
+
+    var readTerms = false;
+    var readPrivacy = false;
+    var currentTab = 'terms';
+
+    function updateUI() {
+        var content = document.getElementById('legalContent');
+        var indicator = document.getElementById('legalReadIndicator');
+        var checkbox = document.getElementById('legalCheckbox');
+        var checkLabel = document.getElementById('legalCheckLabel');
+        var acceptBtn = document.getElementById('legalAcceptBtn');
+        var tabTerms = document.getElementById('legalTabTerms');
+        var tabPrivacy = document.getElementById('legalTabPrivacy');
+        if (!content) return;
+
+        content.textContent = currentTab === 'terms' ? TERMS_TEXT : PRIVACY_TEXT;
+
+        if (tabTerms) {
+            tabTerms.style.borderBottomColor = currentTab === 'terms' ? '#2e7d64' : 'transparent';
+            tabTerms.style.color = currentTab === 'terms' ? '#fff' : '#8aaeb0';
+        }
+        if (tabPrivacy) {
+            tabPrivacy.style.borderBottomColor = currentTab === 'privacy' ? '#2e7d64' : 'transparent';
+            tabPrivacy.style.color = currentTab === 'privacy' ? '#fff' : '#8aaeb0';
+        }
+
+        var currentRead = currentTab === 'terms' ? readTerms : readPrivacy;
+        if (indicator) {
+            if (currentRead) {
+                indicator.innerHTML = '✅ Документ прочитан до конца';
+                indicator.style.color = '#2ecc71';
+            } else {
+                indicator.innerHTML = '📖 Прокрутите документ до конца, чтобы продолжить';
+                indicator.style.color = '#8aaeb0';
+            }
+        }
+
+        var bothRead = readTerms && readPrivacy;
+        if (checkbox) {
+            checkbox.disabled = !bothRead;
+            checkbox.style.cursor = bothRead ? 'pointer' : 'not-allowed';
+        }
+        if (checkLabel) {
+            checkLabel.style.opacity = bothRead ? '1' : '0.5';
+            checkLabel.style.cursor = bothRead ? 'pointer' : 'not-allowed';
+        }
+
+        var canAccept = bothRead && checkbox && checkbox.checked;
+        if (acceptBtn) {
+            if (canAccept) {
+                acceptBtn.disabled = false;
+                acceptBtn.style.background = 'linear-gradient(135deg, #2e7d64, #1e6350)';
+                acceptBtn.style.color = 'white';
+                acceptBtn.style.cursor = 'pointer';
+                acceptBtn.style.opacity = '1';
+            } else {
+                acceptBtn.disabled = true;
+                acceptBtn.style.background = '#2a3a3a';
+                acceptBtn.style.color = '#8aaeb0';
+                acceptBtn.style.cursor = 'not-allowed';
+                acceptBtn.style.opacity = '0.5';
+            }
+        }
+    }
+
+    function checkIfShort() {
+        var content = document.getElementById('legalContent');
+        if (!content) return;
+        if (content.scrollHeight <= content.clientHeight + 10) {
+            if (currentTab === 'terms') readTerms = true;
+            else readPrivacy = true;
+            updateUI();
+        }
+    }
+
+    function attachHandlers() {
+        var content = document.getElementById('legalContent');
+        var checkbox = document.getElementById('legalCheckbox');
+        var acceptBtn = document.getElementById('legalAcceptBtn');
+        var tabTerms = document.getElementById('legalTabTerms');
+        var tabPrivacy = document.getElementById('legalTabPrivacy');
+
+        if (content) {
+            content.addEventListener('scroll', function() {
+                var scrollTop = content.scrollTop;
+                var scrollHeight = content.scrollHeight;
+                var clientHeight = content.clientHeight;
+                if (scrollHeight <= clientHeight + 10) {
+                    if (currentTab === 'terms') readTerms = true;
+                    else readPrivacy = true;
+                    updateUI();
+                    return;
+                }
+                if (scrollTop + clientHeight >= scrollHeight - 30) {
+                    if (currentTab === 'terms' && !readTerms) {
+                        readTerms = true;
+                        updateUI();
+                    } else if (currentTab === 'privacy' && !readPrivacy) {
+                        readPrivacy = true;
+                        updateUI();
+                    }
+                }
+            });
+        }
+
+        if (tabTerms) tabTerms.onclick = function() {
+            currentTab = 'terms';
+            if (content) content.scrollTop = 0;
+            updateUI();
+            setTimeout(checkIfShort, 50);
+        };
+        if (tabPrivacy) tabPrivacy.onclick = function() {
+            currentTab = 'privacy';
+            if (content) content.scrollTop = 0;
+            updateUI();
+            setTimeout(checkIfShort, 50);
+        };
+
+        if (checkbox) checkbox.onchange = updateUI;
+
+        var checkLabel = document.getElementById('legalCheckLabel');
+        if (checkLabel) {
+            checkLabel.addEventListener('click', function(e) {
+                if (e.target.tagName !== 'INPUT' && checkbox && !checkbox.disabled) {
+                    checkbox.checked = !checkbox.checked;
+                    updateUI();
+                }
+            });
+        }
+
+        if (acceptBtn) {
+            acceptBtn.onclick = function() {
+                if (acceptBtn.disabled) return;
+                try {
+                    localStorage.setItem(LEGAL_STORAGE_KEY, JSON.stringify({
+                        accepted: true,
+                        acceptedAt: Date.now(),
+                        version: 'v1'
+                    }));
+                } catch(e) {}
+                var modal = document.getElementById('legalModal');
+                if (modal) {
+                    modal.style.opacity = '0';
+                    setTimeout(function() {
+                        modal.style.display = 'none';
+                        modal.style.opacity = '1';
+                    }, 300);
+                }
+            };
+        }
+    }
+
+    function hasAccepted() {
+        try {
+            var data = localStorage.getItem(LEGAL_STORAGE_KEY);
+            if (!data) return false;
+            var parsed = JSON.parse(data);
+            return parsed && parsed.accepted === true;
+        } catch(e) { return false; }
+    }
+
+    function showModal() {
+        var modal = document.getElementById('legalModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        modal.style.opacity = '0';
+        setTimeout(function() {
+            modal.style.opacity = '1';
+            modal.style.transition = 'opacity 0.3s';
+        }, 10);
+        readTerms = false;
+        readPrivacy = false;
+        currentTab = 'terms';
+        var checkbox = document.getElementById('legalCheckbox');
+        if (checkbox) checkbox.checked = false;
+        updateUI();
+        setTimeout(checkIfShort, 100);
+    }
+
+    function checkOnLoad() {
+        if (hasAccepted()) return;
+        setTimeout(function() {
+            if (!hasAccepted()) showModal();
+        }, 1500);
+    }
+
+    window.showSupportLegalModal = showModal;
+    window.hasAcceptedSupportLegal = hasAccepted;
+
+    setTimeout(function() {
+        attachHandlers();
+        checkOnLoad();
+    }, 300);
+
+    console.log('📜 Support legal modal initialized');
+})();
+</script>
 </body>
-</html>
+    </html>
